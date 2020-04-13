@@ -135,8 +135,8 @@ def load_dataset(observation_err):
 
     with_velocity = list()
     for i in range(len(data) - 1):
-        x_velocity = data[i + 1][0] - data[i][0]
-        y_velocity = data[i + 1][1] - data[i][1]
+        x_velocity = (data[i + 1][0] - data[i][0]) / .1
+        y_velocity = (data[i + 1][1] - data[i][1]) / .1
 
         with_velocity.append([data[i][0], data[i][1], x_velocity, y_velocity])
     
