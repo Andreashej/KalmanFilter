@@ -176,8 +176,8 @@ values = kf.run()
 plt.plot(ground_truth[:,0], ground_truth[:,1])
 plt.plot(observations[:,0], observations[:,1], 'ro')
 plt.plot(values[:,0], values[:,1], 'g-')
-plt.ylim(0,1500)
-plt.xlim(0,2600)
+plt.ylim(0,650)
+plt.xlim(0,1500)
 plt.show()
 
 '''
