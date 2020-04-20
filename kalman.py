@@ -20,15 +20,13 @@ class KalmanFilter:
 
     def kalman_gain(self, P_kp, H):
         '''
-        Compute the kalman gain matrix. R is th measurement covariance matrix.
+        Compute the kalman gain matrix. R is the measurement covariance matrix.
         '''
 
         n = P_kp.dot(H.T)
         D = H.dot(P_kp).dot(H.T) + self.R
 
         K = np.dot(n, np.linalg.inv(D))
-
-        # K = np.divide(n, D, out=np.zeros_like(n), where=D!=0)
         return K
 
     def predict(self, X, u):
@@ -38,15 +36,15 @@ class KalmanFilter:
         '''
 
         X_k = self.A.dot(X) + self.B.dot(u)
-        # P_kp = np.diag(np.diag(self.A.dot(self.P_k).dot(np.transpose(self.A))))
-        P_kp = np.dot(self.A.dot(self.P_k), self.A.T)
+        
+        P_kp = self.A.dot(self.P_k).dot(self.A.T)
         return X_k, P_kp
 
     def update(self, X, Y, P_kp):
         '''
         Update the predicted state X based on a measurement Y. H is a matrix to convert process covanriance matrix into the correct format, in this case identity, since it is already correct.
         '''
-        H = np.identity(len(X))
+        H = np.identity(X.shape[0])
 
         K = self.kalman_gain(P_kp, H)
 
@@ -54,9 +52,9 @@ class KalmanFilter:
 
         X_k = X + K.dot(Y_k - H.dot(X))
 
-        I = np.identity(len(K))
+        I = np.identity(K.shape[0])
 
-        P_k = np.dot(I - K.dot(H), P_kp.dot((I - K.dot(H)).T)) + K.dot(self.R).dot(K.T)
+        P_k = np.dot(I - K.dot(H), P_kp)
 
         return X_k, P_k
         
@@ -162,19 +160,19 @@ def load_dataset(observation_err):
 
     observations = np.array(with_noise)
 
-    controls = np.zeros((len(observations), 2))
+    controls = np.zeros((len(observations), 2, 1))
     
-    return ground_truth, observations, controls
+    return ground_truth, observations.reshape((observations.shape[0], 4, 1)), controls
 
 
 dt = .1 #time between measurements
 
 observation_err = [25, 25, 14, 14]
-process_err = [50, 50, 50, 50]
+process_err = [1000, 1200, 600, 600]
 
 ground_truth, observations, controls = load_dataset(observation_err)
 
-# observation_err = [10, 10, 5, 5]
+# observation_err = [100, 75, 100, 100]
 
 kf = KalmanFilter(2, dt, observations, controls, process_err, observation_err)
 
@@ -203,11 +201,12 @@ values = kf.run()
 # for value in values:
 #     print("X: {}, Y: {}".format(value[0], value[1]))
 
-plt.plot(ground_truth[:,0], ground_truth[:,1])
-plt.plot(observations[:,0], observations[:,1], 'ro')
-plt.plot(values[:,0], values[:,1], 'g-')
+plt.plot(ground_truth[:,0], ground_truth[:,1], label="Ground Truth")
+plt.plot(observations[:,0], observations[:,1], 'ro', label="Noisy measuments")
+plt.plot(values[:,0], values[:,1], 'g-', label="Kalman Filtered")
 plt.ylim(0,650)
 plt.xlim(0,1500)
+plt.legend()
 plt.show()
 
 '''
