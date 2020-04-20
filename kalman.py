@@ -1,8 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from pykalman import KalmanFilter as KF
+
 class KalmanFilter:
     def __init__(self, dim, dt, measurements, controls, process_err, obs_err):
+        self.X_k = np.zeros((1,3))
         self.dt = dt
         self.measurements = measurements
         self.controls = controls
@@ -11,6 +14,7 @@ class KalmanFilter:
         self.A = self.A(dim)
         self.B = self.B(dim)
         self.C = self.C(dim)
+        self.R = self.covariance_matrix(obs_err)
 
         self.P_k = self.covariance_matrix(process_err)
 
@@ -18,12 +22,13 @@ class KalmanFilter:
         '''
         Compute the kalman gain matrix. R is th measurement covariance matrix.
         '''
-        R = self.covariance_matrix(self.obs_err)
 
-        n = P_kp.dot(np.transpose(H))
-        D = H.dot(P_kp).dot(np.transpose(H)) + R
+        n = P_kp.dot(H.T)
+        D = H.dot(P_kp).dot(H.T) + self.R
 
-        K = np.divide(n, D, out=np.zeros_like(n), where=D!=0)
+        K = np.dot(n, np.linalg.inv(D))
+
+        # K = np.divide(n, D, out=np.zeros_like(n), where=D!=0)
         return K
 
     def predict(self, X, u):
@@ -33,7 +38,8 @@ class KalmanFilter:
         '''
 
         X_k = self.A.dot(X) + self.B.dot(u)
-        P_kp = np.diag(np.diag(self.A.dot(self.P_k).dot(np.transpose(self.A))))
+        # P_kp = np.diag(np.diag(self.A.dot(self.P_k).dot(np.transpose(self.A))))
+        P_kp = np.dot(self.A.dot(self.P_k), self.A.T)
         return X_k, P_kp
 
     def update(self, X, Y, P_kp):
@@ -41,7 +47,6 @@ class KalmanFilter:
         Update the predicted state X based on a measurement Y. H is a matrix to convert process covanriance matrix into the correct format, in this case identity, since it is already correct.
         '''
         H = np.identity(len(X))
-        print(H)
 
         K = self.kalman_gain(P_kp, H)
 
@@ -49,7 +54,9 @@ class KalmanFilter:
 
         X_k = X + K.dot(Y_k - H.dot(X))
 
-        P_k = K.dot(H).dot(P_kp)
+        I = np.identity(len(K))
+
+        P_k = np.dot(I - K.dot(H), P_kp.dot((I - K.dot(H)).T)) + K.dot(self.R).dot(K.T)
 
         return X_k, P_k
         
@@ -60,7 +67,8 @@ class KalmanFilter:
         '''
         return self.C.dot(Y)
 
-    def covariance_matrix(self, err):
+    @staticmethod
+    def covariance_matrix(err):
         errors = list()
         for error in err:
             errors.append(error**2)
@@ -162,13 +170,35 @@ def load_dataset(observation_err):
 dt = .1 #time between measurements
 
 observation_err = [25, 25, 14, 14]
-process_err = [30, 30, 7, 7]
+process_err = [50, 50, 50, 50]
 
 ground_truth, observations, controls = load_dataset(observation_err)
+
+# observation_err = [10, 10, 5, 5]
 
 kf = KalmanFilter(2, dt, observations, controls, process_err, observation_err)
 
 values = kf.run()
+
+# A = np.array([
+#     [1, 0, dt, 0],
+#     [0, 1, 0, dt],
+#     [0, 0, 1, 0],
+#     [0, 0, 0, 1]
+# ])
+
+# B = np.array([
+#     [dt**2 / 2, 0],
+#     [0, dt**2 / 2],
+#     [dt, 0],
+#     [0 ,dt]
+# ])
+
+# kf = KF(transition_matrices=A, observation_covariance=KalmanFilter.covariance_matrix(observation_err), transition_covariance=KalmanFilter.covariance_matrix(process_err))
+
+# kf = kf.em(observations, n_iter=len(observations)-1)
+
+# (values, filtered_state_covariances) = kf.filter(observations)
 
 # for value in values:
 #     print("X: {}, Y: {}".format(value[0], value[1]))
