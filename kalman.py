@@ -168,7 +168,7 @@ def load_dataset(observation_err):
 dt = .1 #time between measurements
 
 observation_err = [25, 25, 14, 14]
-process_err = [1000, 1200, 600, 600]
+process_err = [12, 12, 6, 6]
 
 ground_truth, observations, controls = load_dataset(observation_err)
 
